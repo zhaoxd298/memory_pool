@@ -122,9 +122,20 @@ int packet_pool_create(packet_pool_t *pool_ptr, char *name, u32 payload_size, vo
 
 int packet_allocate(packet_pool_t *pool_ptr,  packet_t **packet_ptr, u32 header_size)
 {
+    packet_t *work_ptr;            /* Working packet pointer  */
+
     if ((NULL == pool_ptr) || (NULL == packet_ptr))
     {
         return -1;
     }
 
+    if (pool_ptr->payload_size < header_size)
+    {
+        return -1;
+    }
+
+    if (0 == pool_ptr->pool_available)
+    {
+        return -1;
+    }
 }
