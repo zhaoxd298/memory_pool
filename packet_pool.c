@@ -2,6 +2,9 @@
 #include <stdio.h>
 #include <string.h>
 
+packet_pool_t *g_packet_pool_list = NULL;
+u32 g_packet_pool_cnt = 0;
+
 void packet_pool_init(void)
 {
     g_packet_pool_list = NULL;
@@ -70,6 +73,8 @@ int packet_pool_create(packet_pool_t *pool_ptr, char *name, u32 payload_size, vo
 
         ((packet_t *)cur_packet_ptr)->data_end = (u8 *)(cur_packet_ptr + header_size + original_payload_size);
 
+        ((packet_t *)cur_packet_ptr)->packet_size = original_payload_size;
+
         /* advance to the next packet.  */
         cur_packet_ptr =   next_packet_ptr;
 
@@ -120,7 +125,7 @@ int packet_pool_create(packet_pool_t *pool_ptr, char *name, u32 payload_size, vo
     return 0;
 }
 
-int packet_allocate(packet_pool_t *pool_ptr,  packet_t **packet_ptr, u32 header_size)
+int packet_allocate(packet_pool_t *pool_ptr, packet_t **packet_ptr, u32 header_size)
 {
     packet_t *work_ptr;            /* Working packet pointer  */
 
@@ -128,6 +133,8 @@ int packet_allocate(packet_pool_t *pool_ptr,  packet_t **packet_ptr, u32 header_
     {
         return -1;
     }
+
+    *packet_ptr = NULL;
 
     if (pool_ptr->payload_size < header_size)
     {
@@ -138,4 +145,48 @@ int packet_allocate(packet_pool_t *pool_ptr,  packet_t **packet_ptr, u32 header_
     {
         return -1;
     }
+
+    pool_ptr->pool_available--;
+
+    work_ptr =  pool_ptr->packet_list;
+    pool_ptr->packet_list = work_ptr->packet_next;
+    work_ptr->packet_next = NULL;
+    work_ptr->data_size = 0;
+    work_ptr->prepend_ptr =  work_ptr->data_start + header_size;
+    work_ptr->append_ptr =   work_ptr->prepend_ptr;
+    *packet_ptr =  work_ptr;
+
+    return 0;
+}
+
+int packet_release(packet_t *packet_ptr)
+{
+    packet_pool_t *pool_ptr; 
+
+    if (NULL == packet_ptr)
+    {
+        return -1;
+    }
+
+    pool_ptr =  packet_ptr->pool_owner;
+    if (NULL == pool_ptr)
+    {
+        return -1;
+    }
+
+    if (PACKET_POOL_ID != pool_ptr->pool_id)
+    {
+        return -1;
+    }
+
+    /* Put the packet back in the available list.  */
+    packet_ptr->packet_next = pool_ptr->packet_list;
+
+    /* Adjust the head pointer.  */
+    pool_ptr->packet_list =  packet_ptr;
+
+    /* Increment the count of available blocks.  */
+    pool_ptr->pool_available++;
+
+    return 0;
 }

@@ -26,6 +26,8 @@ typedef struct packet_s
     char *data_end;                       /* the buffer end address */
     char *prepend_ptr;                    /* used to prepend information in front of the packet. */
     char *append_ptr;                     /* Define the pointer to the byte after the last character written in the buffer.  */
+    u32 data_size;                        /* Define the total data length in packet.  */
+    u32 packet_size;                      /* the packet buf total size. */
     struct packet_s *packet_next;         /* next packet ptr*/
     struct packet_pool_s *pool_owner;     /* The packet pool of the packet belongs */
 } packet_t;
@@ -45,7 +47,10 @@ typedef struct packet_pool_s
     struct packet_pool_s *pool_next;    /* next pool pointer */
 } packet_pool_t;
 
-packet_pool_t *g_packet_pool_list = NULL;
-u32 g_packet_pool_cnt = 0;
+
+int packet_pool_create(packet_pool_t *pool_ptr, char *name, u32 payload_size, void *pool_start, u32 pool_size);
+int packet_allocate(packet_pool_t *pool_ptr, packet_t **packet_ptr, u32 header_size);
+int packet_release(packet_t *packet_ptr);
+
 
 #endif
